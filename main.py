@@ -4,8 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from ultralytics import YOLO
-from PIL import Image
-import io, base64, cv2, hashlib
+from PIL import Image, ImageDraw, ImageFont
+import io, base64, hashlib, os
+from pathlib import Path
 from datetime import datetime, timezone
 from fastapi import Query
 MODEL_VERSION = 'YOLO11n-' + hashlib.sha256(open('best.pt', 'rb').read()).hexdigest()[:12]
@@ -22,6 +23,36 @@ app.add_middleware(
 # 서버 시작 시 1회만 로드
 model = YOLO("best.pt")
 KOR_MAP = {"Fullripe": "완숙", "Semiripe": "반숙", "Unripe": "미숙"}
+
+
+def draw_korean_results(image, detections):
+    """Draw on the original RGB image using a Korean-capable system font."""
+    canvas = image.copy()
+    draw = ImageDraw.Draw(canvas)
+    size = max(16, min(48, round(image.width / 45)))
+    candidates = [
+        os.environ.get("KOREAN_FONT_PATH", ""),
+        "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
+        "C:/Windows/Fonts/malgunbd.ttf",
+    ]
+    font_path = next((p for p in candidates if p and Path(p).is_file()), None)
+    if font_path is None:
+        raise HTTPException(500, "한글 글꼴이 없습니다. fonts-nanum 또는 KOREAN_FONT_PATH를 확인하세요.")
+    font = ImageFont.truetype(font_path, size)
+    colors = {"Fullripe": "#b93539", "Semiripe": "#995600", "Unripe": "#24653d"}
+    width = max(2, size // 8)
+    for item in detections:
+        x1, y1, x2, y2 = item["bbox_xyxy"]
+        color = colors.get(item["class"], "#344054")
+        draw.rectangle((x1, y1, x2, y2), outline=color, width=width)
+        label = f'{item["class_kor"]} {item["confidence"]:.2f}'
+        left, top, right, bottom = draw.textbbox((0, 0), label, font=font)
+        label_width, label_height = right - left + 8, bottom - top + 8
+        tx = max(0, min(x1, canvas.width - label_width))
+        ty = max(0, min(y1 - label_height, canvas.height - label_height))
+        draw.rectangle((tx, ty, tx + label_width, ty + label_height), fill=color)
+        draw.text((tx + 4 - left, ty + 4 - top), label, font=font, fill="white")
+    return canvas
 
 
 @app.get("/")
@@ -66,10 +97,9 @@ async def predict(file: UploadFile = File(...), conf: float = Query(0.25, ge=0.0
         })
 
     # 주석 이미지를 base64로 반환 (디스크 저장 X)
-    annotated_bgr = results.plot()
-    ok, buf = cv2.imencode(".jpg", annotated_bgr, [cv2.IMWRITE_JPEG_QUALITY, 90])
-    if not ok:
-        raise HTTPException(500, "결과 이미지 생성 실패")
+    annotated = draw_korean_results(image, detections)
+    buf = io.BytesIO()
+    annotated.save(buf, format="JPEG", quality=90)
 
     return {
         "model_version": MODEL_VERSION,
@@ -78,7 +108,7 @@ async def predict(file: UploadFile = File(...), conf: float = Query(0.25, ge=0.0
         "counts_kor": {KOR_MAP[k]: v for k, v in counts.items()},
         "total": sum(counts.values()),
         "detections": detections,
-        "annotated_image_base64": base64.b64encode(buf.tobytes()).decode("utf-8"),
+        "annotated_image_base64": base64.b64encode(buf.getvalue()).decode("utf-8"),
     }
 
 
