@@ -1,0 +1,21 @@
+# Railway 배포 안내
+
+1. 이 폴더 전체를 새 GitHub 저장소에 올립니다. best.pt와 static 폴더를 포함하세요.
+2. Railway에서 New Project → Deploy from GitHub repo로 저장소를 선택합니다.
+3. Dockerfile을 자동 인식하여 빌드합니다. 시작 명령은 Dockerfile에 있으므로 별도로 덮어쓰지 않습니다.
+4. /health 성공 후 Settings → Networking → Generate Domain으로 주소를 생성합니다.
+5. 공개 주소에서 사진 업로드와 결과 확인을 시험합니다. 메모리 사용량 및 요금은 Railway 대시보드에서 확인하세요.
+
+로컬 Docker 실행:
+  docker build -t strawberry-ui .
+  docker run --rm -p 8000:8000 strawberry-ui
+접속: http://127.0.0.1:8000
+
+구현: 요구사항 11~13 업로드 제한, 추론, 단계별 수량, 점수, 분석 시각, 모델 파일 식별자. 14~15 확인·수정과 기록은 현재 탭 메모리에 최대 20건만 보관합니다. 원래 AI 결과와 수정값은 별도 필드입니다. JSON 내려받기로 수동 보관할 수 있습니다. 서버 로그인·사용자별 권한·영구 기록 저장은 미구현입니다. 16 모델 정보 화면 제공, 버전 승인/교체 관리 미구현.
+현재 모델은 터키 온실 데이터 기반으로 설향 품종에 대한 검증을 마친 모델이 아닙니다.
+50% 미만 확인 필요 표시는 임시 기준입니다. 현장 검증 후 합의한 기준으로 조정하세요.
+원본 D:\스마트팜 파일은 수정하지 않았습니다.
+
+배포 및 실모델 추론은 이 환경에서 실행하지 못했습니다. 공개 URL 발급은 위 배포 후 가능합니다.
+공식 참고: https://docs.railway.com/deployments/healthchecks
+공식 참고: https://docs.railway.com/deployments/start-command
