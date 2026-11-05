@@ -1,0 +1,8 @@
+path: "D:/strawberry-railway/strawberry-railway/strawberry-negatives/strawberry-negatives"
+train: train.txt
+val: val.txt
+test: test.txt
+names:
+  0: Fullripe
+  1: Semiripe
+  2: Unripe

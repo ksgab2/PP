@@ -1,0 +1,17 @@
+{
+  "train": {
+    "original": 396,
+    "negative": 80,
+    "total": 476
+  },
+  "val": {
+    "original": 113,
+    "negative": 39,
+    "total": 152
+  },
+  "test": {
+    "original": 57,
+    "negative": 39,
+    "total": 96
+  }
+}

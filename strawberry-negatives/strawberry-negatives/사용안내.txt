@@ -1,0 +1,55 @@
+딸기 오검출 감소용 배경 이미지 1차 실험 세트
+
+구성
+- COCO 2017: 98장, Fruits-360 original-size: 60장, 총 158장.
+- train 80장 / val 39장 / test 39장. 이미지마다 동일 이름의 0바이트 TXT 라벨 제공.
+- 모델 클래스는 0 Fullripe / 1 Semiripe / 2 Unripe 유지. background 클래스를 추가하지 않습니다.
+- 기존 best.pt와 원본 데이터는 변경하지 않았으며 학습을 실행하지 않았습니다.
+
+선별 및 한계
+- COCO 공식 val2017에서 음식 관련 주석이 있는 장면을 우선 제외하고 100장 후보를 선택했습니다.
+- 모든 후보를 AI 보조자가 연락 인화식 이미지 목록으로 시각 검토했으며 일부 복잡한 장면은 개별 크기로 재검토했습니다. 사람이 검수했다고 주장하지 않습니다.
+- 음식 판매 장면 1장, 눈보라로 시야가 나쁜 사진 1장을 제외했습니다. 눈에 보이는 딸기 열매를 발견하지 못한 사진을 포함했습니다. 아주 작은 배경 물체까지 부재가 보증되는 것은 아니므로 previews도 확인하세요.
+- Fruits-360은 Strawberry 및 혼합과일 폴더를 사용하지 않고 사과·토마토·체리·고추·블랙베리·배·라즈베리에서 선택했습니다.
+- 12개 품종 폴더 각각 5장씩 간격을 두고 골랐으며 품종 폴더를 split 간 분리했습니다. 촬영 개체의 완전한 독립성까지 보증하지는 않습니다.
+- 모든 이미지의 파일 SHA-256 중복을 검사했습니다. COCO 장면의 근접 중복을 자동 탐지한 것은 아닙니다.
+- 기존 best.pt를 실제로 실행해 오검출 사진만 골라낸 hard-negative mining은 아직 수행하지 않았습니다.
+- 실사 중심의 작은 1차 실험 세트입니다. 임의의 일러스트나 모든 비딸기 입력을 막는 성능은 보장하지 않습니다.
+
+출처와 이용 조건
+- manifest.csv / manifest.json: 사진별 원본 주소, 다운로드 주소, 라이선스, split, 그룹, 해시.
+- COCO: https://cocodataset.org/ (사진별 라이선스는 manifest에 보존)
+- Fruits-360: https://github.com/fruits-360/fruits-360-original-size
+  제작자 Mihai Oltean, CC BY-SA 4.0. 세부 내용은 FRUITS_LICENSE.txt 참조.
+- 배포 이미지들은 RGB JPEG로 재인코딩했고 원본 해상도는 유지했습니다. 사진이나 데이터셋 재배포 시 원래 출처와 해당 사진의 이용 조건을 준수하세요.
+- COCO 원래 val 세트를 이번 독립 프로젝트의 train/val/test로 재분할했습니다. COCO 벤치마크 평가용으로 사용하지 마세요.
+
+사용 순서 (기존 Ultralytics가 작동하는 Python 환경)
+1. ZIP을 D:\스마트팜 아래에 풀어 strawberry-negatives 폴더를 만듭니다.
+2. 해당 폴더에서 다음 명령을 실행합니다.
+   python prepare_dataset.py --original "D:\스마트팜\dataset_yolo"
+   위치가 바뀌면 반드시 다시 실행하세요. 현재 PC용 절대 경로 목록을 새로 생성합니다.
+3. 데이터 수를 확인합니다.
+   train: 딸기 396 + 배경 80 = 476
+   val: 딸기 113 + 배경 39 = 152
+   test: 딸기 57 + 배경 39 = 96
+4. 추가 학습 예시 (아래 명령은 학습을 실제로 시작합니다):
+   yolo detect train model="D:\스마트팜\best.pt" data="data_mixed.yaml" epochs=30 imgsz=640 batch=4 workers=0 lr0=0.001 patience=10 project="runs_negative" name="finetune_v1"
+   수치는 소규모 첫 실험 시작값이며 최적값이 아닙니다. 메모리 사용량과 검증 성능으로 조정하세요.
+   resume=True는 사용하지 않습니다. 새 데이터로 기존 가중치에서 시작하는 별도 실행입니다.
+
+평가
+- 기존 모델과 새 모델을 같은 val 이미지와 같은 conf에서 비교합니다.
+- 딸기 재현율·반숙 성능과 함께, 배경 사진 중 하나 이상의 검출이 발생한 이미지 비율을 기록하세요.
+- 배경만 있는 데이터의 mAP는 유효한 주 평가 지표가 아닙니다.
+- 최종 test는 학습·임계값 선택에 쓰지 말고 최종 비교 때 사용하세요.
+- 새 모델은 새 runs 폴더에 저장됩니다. 확인 전 기존 배포 best.pt를 덮어쓰지 마세요.
+
+파일
+images/ 및 labels/: 비딸기 이미지와 빈 라벨
+previews/: split별 이미지 확인용 미리보기
+prepare_dataset.py: 원본을 수정하지 않고 혼합 학습 목록 생성
+data_mixed.yaml 및 train/val/test.txt: 현재 경로 기준 혼합 학습 설정
+manifest.csv/json: 출처 및 검수 기록
+dataset_summary.json: 데이터 수
+excluded.json: 제외한 사진 및 이유
